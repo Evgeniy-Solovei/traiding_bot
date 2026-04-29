@@ -51,7 +51,16 @@ def get_settings_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🎚 Плечо (Leverage)", callback_data="settings_leverage")
     )
     builder.row(
-        InlineKeyboardButton(text="⚠️ Риск на сделку", callback_data="settings_risk")
+        InlineKeyboardButton(text="🛑 Дневной лимит", callback_data="settings_daily_limit")
+    )
+    builder.row(
+        InlineKeyboardButton(text="📉 Убыточных подряд", callback_data="settings_max_losses")
+    )
+    builder.row(
+        InlineKeyboardButton(text="🧯 Автопауза вкл/выкл", callback_data="settings_auto_pause")
+    )
+    builder.row(
+        InlineKeyboardButton(text="🚦 Риск-пауза вкл/выкл", callback_data="settings_risk_pause_toggle")
     )
     builder.row(
         InlineKeyboardButton(text="« Назад", callback_data="back_to_main")
@@ -187,3 +196,33 @@ def get_cancel_keyboard() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text="❌ Отмена"))
     return builder.as_markup(resize_keyboard=True)
+
+
+def get_popular_pairs_keyboard() -> InlineKeyboardMarkup:
+    """
+    Клавиатура с популярными торговыми парами для быстрого выбора.
+    """
+    builder = InlineKeyboardBuilder()
+    
+    # Популярные пары
+    popular_pairs = [
+        ("BTCUSDT", "₿ Bitcoin"),
+        ("ETHUSDT", "Ξ Ethereum"),
+    ]
+    
+    for symbol, name in popular_pairs:
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{name} ({symbol})",
+                callback_data=f"quick_add_pair_{symbol}"
+            )
+        )
+    
+    builder.row(
+        InlineKeyboardButton(text="➕ Добавить свою пару", callback_data="pair_add")
+    )
+    builder.row(
+        InlineKeyboardButton(text="⏭ Пропустить", callback_data="skip_pairs_setup")
+    )
+    
+    return builder.as_markup()

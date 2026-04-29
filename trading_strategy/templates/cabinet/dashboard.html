@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кабинет трейдера</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f7fb;
+            color: #1b1f24;
+            margin: 0;
+        }
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #dde3ea;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+        .header a {
+            color: #0b5cff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .wrapper {
+            max-width: 980px;
+            margin: 24px auto;
+            padding: 0 16px;
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #dde3ea;
+            border-radius: 12px;
+            padding: 18px;
+        }
+        h2 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+        .muted {
+            margin: 0 0 12px;
+            color: #4f5968;
+            font-size: 14px;
+        }
+        .status {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #eef4ff;
+            border: 1px solid #cfe0ff;
+        }
+        .field {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #c4ccd6;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            background: #fff;
+        }
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .checkbox input {
+            width: 16px;
+            height: 16px;
+        }
+        .errors {
+            color: #b42318;
+            font-size: 13px;
+            margin: 6px 0 0;
+            padding-left: 16px;
+        }
+        .messages {
+            max-width: 980px;
+            margin: 16px auto 0;
+            padding: 0 16px;
+        }
+        .message {
+            background: #ecfdf3;
+            border: 1px solid #abefc6;
+            color: #067647;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 11px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            background: #0b5cff;
+            color: #fff;
+            cursor: pointer;
+        }
+        .tip {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #7c2d12;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Кабинет трейдера</h1>
+        <a href="{% url 'cabinet_logout' %}">Выйти</a>
+    </div>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="wrapper">
+        <section class="card">
+            <h2>API ключи Bybit</h2>
+            <p class="muted">Поля API Key/API Secret заполняйте только если хотите добавить новые или заменить текущие ключи.</p>
+
+            {% if exchange %}
+                <p class="status">
+                    Ключ сохранен: <strong>{{ api_key_hint }}</strong><br>
+                    Сеть: <strong>{% if exchange.is_testnet %}Testnet{% else %}Mainnet{% endif %}</strong><br>
+                    Статус: <strong>{% if exchange.is_active %}Активен{% else %}Неактивен{% endif %}</strong>
+                </p>
+            {% else %}
+                <p class="status">Ключи еще не добавлены.</p>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_api">
+
+                {% if api_form.non_field_errors %}
+                    <ul class="errors">
+                        {% for error in api_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                <div class="field">
+                    <label for="{{ api_form.api_key.id_for_label }}">API Key</label>
+                    {{ api_form.api_key }}
+                    {% if api_form.api_key.errors %}
+                        <ul class="errors">
+                            {% for error in api_form.api_key.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ api_form.api_secret.id_for_label }}">API Secret</label>
+                    {{ api_form.api_secret }}
+                    {% if api_form.api_secret.errors %}
+                        <ul class="errors">
+                            {% for error in api_form.api_secret.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <label class="checkbox">{{ api_form.is_testnet }} Использовать testnet</label>
+                <label class="checkbox">{{ api_form.is_active }} Ключи активны</label>
+                <label class="checkbox">{{ api_form.validate_connection }} Проверить подключение перед сохранением</label>
+
+                <button type="submit">Сохранить API</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Торговые настройки</h2>
+            <p class="muted">Размер ордера задается только фиксированной суммой в USD.</p>
+
+            {% if settings_form.instance.is_risk_paused %}
+                <p class="status">
+                    Торговля на паузе по рискам.<br>
+                    Причина: <strong>{{ settings_form.instance.risk_pause_reason|default:"не указана" }}</strong>
+                </p>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_settings">
+
+                {% if settings_form.non_field_errors %}
+                    <ul class="errors">
+                        {% for error in settings_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                <div class="field">
+                    <label for="{{ settings_form.base_order_size.id_for_label }}">Фиксированный размер ($)</label>
+                    {{ settings_form.base_order_size }}
+                    {% if settings_form.base_order_size.errors %}
+                        <ul class="errors">
+                            {% for error in settings_form.base_order_size.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ settings_form.leverage.id_for_label }}">Плечо</label>
+                    {{ settings_form.leverage }}
+                    {% if settings_form.leverage.errors %}
+                        <ul class="errors">
+                            {% for error in settings_form.leverage.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ settings_form.daily_loss_limit_percent.id_for_label }}">Дневной лимит убытка (%)</label>
+                    {{ settings_form.daily_loss_limit_percent }}
+                    {% if settings_form.daily_loss_limit_percent.errors %}
+                        <ul class="errors">
+                            {% for error in settings_form.daily_loss_limit_percent.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ settings_form.max_consecutive_losses.id_for_label }}">Максимум убыточных подряд</label>
+                    {{ settings_form.max_consecutive_losses }}
+                    {% if settings_form.max_consecutive_losses.errors %}
+                        <ul class="errors">
+                            {% for error in settings_form.max_consecutive_losses.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <label class="checkbox">{{ settings_form.auto_pause_on_risk }} Автопауза по рискам</label>
+
+                <label class="checkbox">{{ settings_form.is_trading_active }} Торговля активна</label>
+                <label class="checkbox">{{ settings_form.is_test_mode }} Тестовый режим (без реальных ордеров)</label>
+
+                <button type="submit">Сохранить настройки</button>
+            </form>
+
+            <div class="tip">
+                Для первого запуска на реальном аккаунте рекомендуется:
+                фиксированный размер <strong>$1-$5</strong>, плечо <strong>1x-3x</strong>.
+            </div>
+        </section>
+    </div>
+</body>
+</html>

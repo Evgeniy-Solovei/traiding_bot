@@ -2,17 +2,29 @@
 
 Автоматический торговый бот для фьючерсов на Bybit с управлением через Telegram.
 
-## 📋 Описание
+## 📋 Функционал
 
-Асинхронный Telegram бот на Django 5.2 и aiogram 3.x для автоматической торговли фьючерсами на Bybit. Использует стратегию "Ловим отскоки от границ ценового канала" с подтверждением 4-мя индикаторами.
+### Основные возможности
 
-### 🎯 Стратегия
+- ✅ **Автоматический анализ рынка** каждую минуту
+- ✅ **Уведомления о текущем состоянии рынка** с полным анализом индикаторов
+- ✅ **Открытие/закрытие позиций** по сигналам стратегии
+- ✅ **Управление рисками** (размер позиции, SL/TP)
+- ✅ **Поддержка нескольких торговых пар** одновременно
+- ✅ **Тестовый режим** без API ключей (только анализ и уведомления)
+- ✅ **Реальный режим** с автоматической торговлей
+- ✅ **Статистика сигналов** (успешные/неуспешные)
+- ✅ **История всех сделок**
+- ✅ **Шифрование API ключей** (Fernet)
+- ✅ **Веб-кабинет** для ввода API ключей и торговых настроек
+
+### Стратегия
 
 **Философия**: Ловим отскоки от границ ценового канала в направлении тренда с подтверждением 4-мя индикаторами.
 
 **Индикаторы**:
 - EMA (9/21) - определение тренда
-- RSI (14) - перекупленность/перепроданность  
+- RSI (14) - перекупленность/перепроданность
 - Williams %R (14) - перекупленность/перепроданность
 - Ценовой канал (20 свечей) - границы для входа
 - Объем - подтверждение силы движения
@@ -25,18 +37,7 @@
 - Стоп-лосс: 1.5x ATR
 - Тейк-профит: 2.5x ATR
 - Расчет размера позиции на основе % риска от депозита
-
-## 🚀 Возможности
-
-✅ Автоматический анализ рынка каждую минуту  
-✅ Открытие/закрытие позиций по сигналам стратегии  
-✅ Управление рисками (размер позиции, SL/TP)  
-✅ Поддержка нескольких торговых пар одновременно  
-✅ Testnet и Mainnet режимы  
-✅ Уведомления о сделках в Telegram  
-✅ Статистика и история торговли  
-✅ Шифрование API ключей (Fernet)  
-✅ Админ-панель Django для управления  
+- Режим размера ордера: фиксированный `$` или `% от свободного USDT`
 
 ## 🛠 Технологии
 
@@ -50,330 +51,394 @@
 
 ## 📦 Установка
 
-### 1. Клонирование репозитория
+### 1. Предварительные требования
 
+**macOS:**
 ```bash
-git clone <repository-url>
-cd webapp
+brew install postgresql@14 redis
+brew services start postgresql@14
+brew services start redis
 ```
 
-### 2. Создание виртуального окружения
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install postgresql redis-server -y
+sudo systemctl start postgresql
+sudo systemctl start redis
+```
+
+### 2. Клонирование и настройка
 
 ```bash
+cd /path/to/project
 python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# или
-venv\Scripts\activate  # Windows
-```
-
-### 3. Установка зависимостей
-
-```bash
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Настройка PostgreSQL
+### 3. База данных
 
 ```bash
-# Установите PostgreSQL если еще не установлен
-sudo apt install postgresql postgresql-contrib  # Ubuntu/Debian
-
-# Создайте базу данных
-sudo -u postgres psql
-CREATE DATABASE trading_bot;
-CREATE USER your_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE trading_bot TO your_user;
-\q
+# Создание БД
+createdb trading_bot
+psql trading_bot -c "CREATE USER user WITH PASSWORD 'password';"
+psql trading_bot -c "GRANT ALL PRIVILEGES ON DATABASE trading_bot TO user;"
+psql trading_bot -c "GRANT ALL ON SCHEMA public TO user;"
 ```
 
-### 5. Установка Redis
+### 4. Создание .env файла
 
-```bash
-# Ubuntu/Debian
-sudo apt install redis-server
-sudo systemctl start redis
-sudo systemctl enable redis
-
-# Проверка
-redis-cli ping  # должен ответить PONG
-```
-
-### 6. Настройка переменных окружения
-
-Скопируйте `.env.example` в `.env` и заполните:
-
-```bash
-cp .env.example .env
-nano .env
-```
-
-**Обязательные переменные**:
+Создайте файл `.env` в корне проекта:
 
 ```env
 # Django
-SECRET_KEY=your-django-secret-key-here
+SECRET_KEY=django-insecure-8*)rs+%vhropla9w%#+w7w0)7*of7$n=pk3s*gf6-w3#wbl3#r
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
 # PostgreSQL
 DB_NAME=trading_bot
-DB_USER=your_user
-DB_PASSWORD=your_password
+DB_USER=user
+DB_PASSWORD=password
 DB_HOST=localhost
 DB_PORT=5432
 
-# Telegram Bot
-TELEGRAM_BOT_TOKEN=your-bot-token-from-botfather
+# Telegram Bot (ОБЯЗАТЕЛЬНО!)
+TELEGRAM_BOT_TOKEN=ваш-токен-от-BotFather
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
-
-# Celery
 CELERY_BROKER_URL=redis://localhost:6379/0
 CELERY_RESULT_BACKEND=redis://localhost:6379/0
 
-# Шифрование (будет сгенерирован автоматически при первом запуске)
-ENCRYPTION_KEY=
+# Шифрование (ОБЯЗАТЕЛЬНО!)
+ENCRYPTION_KEY=сгенерированный-ключ
 
-# Bybit (для тестирования)
+# Bybit
 BYBIT_TESTNET=True
 ```
 
-### 7. Генерация ключа шифрования
+**Как получить TELEGRAM_BOT_TOKEN:**
+1. Откройте Telegram → [@BotFather](https://t.me/BotFather)
+2. Отправьте `/newbot`
+3. Следуйте инструкциям
+4. Скопируйте токен
 
+**Как сгенерировать ENCRYPTION_KEY:**
 ```bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+python3 generate_key.py
 ```
 
-Скопируйте вывод в `ENCRYPTION_KEY` в файле `.env`.
-
-### 8. Создание миграций и применение
+### 5. Миграции
 
 ```bash
-python manage.py makemigrations
 python manage.py migrate
+python manage.py createsuperuser  # опционально
 ```
 
-### 9. Создание суперпользователя для админки
+## 🚀 Запуск
+
+### Локально (БД установлена на компьютере)
+
+Локально используем PostgreSQL, установленный на машине (не контейнер).
+
+В `.env`:
+- `POSTGRES_HOST=localhost`
+- `POSTGRES_PORT=5432`
+
+Быстрый запуск:
 
 ```bash
-python manage.py createsuperuser
-```
-
-## 🏃 Запуск
-
-### Вариант 1: Ручной запуск всех компонентов
-
-**Терминал 1 - Django (опционально для админки)**:
-```bash
-python manage.py runserver
-```
-
-**Терминал 2 - Telegram Bot**:
-```bash
-python -m bot.bot_main
-```
-
-**Терминал 3 - Celery Worker**:
-```bash
-celery -A config worker -l info
-```
-
-**Терминал 4 - Celery Beat (периодические задачи)**:
-```bash
-celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-```
-
-### Вариант 2: Использование скриптов (рекомендуется)
-
-Создайте файл `start.sh`:
-
-```bash
-#!/bin/bash
-
-# Запуск всех компонентов в фоновом режиме
-
-# Celery Worker
-celery -A config worker -l info --detach --pidfile=celery_worker.pid --logfile=celery_worker.log
-
-# Celery Beat
-celery -A config beat -l info --detach --pidfile=celery_beat.pid --logfile=celery_beat.log --scheduler django_celery_beat.schedulers:DatabaseScheduler
-
-# Telegram Bot
-nohup python -m bot.bot_main > bot.log 2>&1 &
-echo $! > bot.pid
-
-echo "✅ Все компоненты запущены"
-echo "📝 Логи:"
-echo "  - Celery Worker: celery_worker.log"
-echo "  - Celery Beat: celery_beat.log"
-echo "  - Telegram Bot: bot.log"
-```
-
-Для остановки создайте `stop.sh`:
-
-```bash
-#!/bin/bash
-
-# Остановка всех компонентов
-
-# Остановка Celery Worker
-if [ -f celery_worker.pid ]; then
-    celery -A config control shutdown
-    rm celery_worker.pid
-fi
-
-# Остановка Celery Beat
-if [ -f celery_beat.pid ]; then
-    kill $(cat celery_beat.pid)
-    rm celery_beat.pid
-fi
-
-# Остановка Telegram Bot
-if [ -f bot.pid ]; then
-    kill $(cat bot.pid)
-    rm bot.pid
-fi
-
-echo "✅ Все компоненты остановлены"
-```
-
-Сделайте скрипты исполняемыми:
-```bash
-chmod +x start.sh stop.sh
-```
-
-Запуск:
-```bash
+chmod +x start.sh
 ./start.sh
 ```
 
-Остановка:
+`start.sh` запускает локально:
+- `uvicorn`
+- `python bot_main.py`
+- `celery worker`
+- `celery beat`
+- `redis` (если не запущен)
+
+Ручной запуск (если без скрипта, в отдельных терминалах):
+
 ```bash
-./stop.sh
+redis-server
 ```
+
+```bash
+uvicorn trading_bot.asgi:application --host 0.0.0.0 --port 8000
+```
+
+```bash
+python bot_main.py
+```
+
+```bash
+celery -A trading_bot worker -l info
+```
+
+```bash
+celery -A trading_bot beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
+
+### На Сервере (БД в Docker, PostgreSQL 17)
+
+1. Подготовьте `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Заполните минимум:
+- `SECRET_KEY`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `TELEGRAM_BOT_TOKEN`
+- `ENCRYPTION_KEY` (`python3 generate_key.py`)
+- `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` под ваш домен/IP
+
+2. Поднимите всё:
+
+```bash
+docker compose up -d --build
+```
+
+Сервисы:
+- `app` (миграции + Uvicorn + Telegram bot)
+- `postgres` (`postgres:17-alpine`)
+- `redis`
+- `celery`
+- `celery-beat`
+
+3. Создайте администратора кабинета:
+
+```bash
+docker compose exec app python manage.py createsuperuser
+```
+
+4. Откройте кабинет:
+- `http://<server-ip-or-domain>:8000/cabinet/login/`
+
+5. Контроль:
+
+```bash
+docker compose ps
+docker compose logs -f app postgres redis celery celery-beat
+docker compose down
+```
+
+## 🧭 Веб-кабинет
+
+Кабинет нужен для управления ключами и рисками на сервере без Telegram-команд.
+
+**Вход:**
+- URL: `http://<ваш_сервер>:8000/cabinet/login/`
+- Используется Django-пользователь (`python manage.py createsuperuser`)
+
+**В кабинете можно:**
+- Сохранить/обновить API Key и API Secret Bybit
+- Выбрать сеть: `Testnet` или `Mainnet`
+- Настроить фиксированный размер ордера в USD
+- Настроить плечо и тестовый/реальный режим
+- Настроить риск-стопы:
+  - дневной лимит убытка (%)
+  - максимум убыточных сделок подряд
+  - автопауза торговли при срабатывании лимитов
+
+## 💸 Запуск на маленьких суммах (рекомендация)
+
+Для первого запуска на реальном аккаунте:
+1. Начните с `Testnet`, проверьте 30-60 минут.
+2. Для `Mainnet` поставьте фиксированный размер `1-5 USD`.
+3. Плечо `1x-3x`.
+4. Запустите только 1-2 торговые пары, затем расширяйте.
+
+**Тест на 1 час (минимальный риск):**
+1. Поставьте `Фиксированный размер = 1.00 USD`.
+2. Плечо `1x-3x`.
+3. Включите `Testnet`, активируйте торговлю и дайте боту поработать 1 час.
+4. Только после этого переключайте сеть на `Mainnet`.
 
 ## 📱 Использование бота
 
-### 1. Получение API ключей Bybit
+### Первый запуск
 
-**Для testnet** (рекомендуется для начала):
-1. Зайдите на https://testnet.bybit.com
-2. Зарегистрируйтесь или войдите
-3. Перейдите в API Management
-4. Создайте новый API ключ с правами: Trading (Read/Write), Position (Read/Write)
-5. Скопируйте API Key и API Secret
+1. Найдите вашего бота в Telegram
+2. Отправьте `/start`
+3. Выберите торговые пары (Bitcoin, Ethereum или добавьте свои)
+4. Нажмите `▶️ Старт`
 
-**Для mainnet** (реальная торговля):
-1. Зайдите на https://www.bybit.com
-2. Перейдите в API Management
-3. Создайте новый API ключ с правами: Trading (Read/Write), Position (Read/Write)
-4. **ВАЖНО**: Добавьте IP whitelist для безопасности!
+### Сообщения о мониторинге
 
-### 2. Настройка бота в Telegram
-
-1. Найдите вашего бота в Telegram (токен из `.env`)
-2. Отправьте `/start` - бот создаст вам аккаунт
-3. Нажмите `🔑 API Ключи` → `➕ Добавить ключи`
-4. Выберите сеть (Testnet или Mainnet)
-5. Введите API Key и API Secret
-6. Бот проверит подключение и покажет баланс
-
-### 3. Настройка параметров торговли
-
-Нажмите `⚙️ Настройки` и настройте:
-
-- **💰 Размер ордера**: Базовый размер позиции в USD (минимум $5)
-- **🎚 Плечо**: От 1x до 100x (рекомендуется 10-20x)
-- **⚠️ Риск на сделку**: % от депозита (рекомендуется 1-2%)
-
-**Пример**:
-- Депозит: $1000
-- Риск: 1%
-- Плечо: 10x
-
-При срабатывании стоп-лосса вы потеряете максимум $10 (1% от $1000).
-
-### 4. Добавление торговых пар
-
-Нажмите `📈 Торговые пары` → `➕ Добавить пару`
-
-Введите символ в формате: `BTCUSDT`, `ETHUSDT`, `SOLUSDT`
-
-Можно добавить несколько пар - бот будет мониторить все активные.
-
-### 5. Запуск торговли
-
-Нажмите `▶️ Старт`
-
-Бот начнет:
-- Анализировать рынок каждую минуту
-- Искать сигналы по вашей стратегии
-- Открывать позиции при обнаружении сигнала
-- Отправлять уведомления о каждой сделке
-
-### 6. Мониторинг
-
-- `📊 Статистика` - общая статистика торговли
-- `📝 Открытые позиции` - текущие открытые сделки (можно закрыть вручную)
-- `📜 История` - все закрытые сделки
-
-### 7. Остановка
-
-Нажмите `⏸ Стоп` для остановки торговли.
-
-Открытые позиции продолжат отслеживаться и закроются при достижении SL/TP.
-
-## 🔧 Админ-панель Django
-
-Доступна по адресу: http://localhost:8000/admin
-
-**Возможности**:
-- Просмотр всех пользователей и их настроек
-- Управление биржами и API ключами
-- Просмотр истории сделок
-- Просмотр статистики
-- Ручное изменение параметров стратегии
-
-## 📊 Структура проекта
+**Каждую минуту** бот отправляет сообщения о текущем состоянии рынка:
 
 ```
-webapp/
-├── config/                  # Настройки Django и Celery
+🔍 МОНИТОРИНГ РЫНКА
+
+💹 Символ: BTCUSDT
+💰 Цена: $45000.00
+
+🟢 Тренд: Бычий (В бычьем тренде ищем LONG сигналы)
+
+📊 Индикаторы:
+• RSI: 65.5
+• Williams %R: -35.2
+• EMA9/EMA21: $44900.00 / $44800.00
+
+🟢 LONG условия (2/5):
+❌ 📉 Цена у нижней границы канала
+❌ 📊 RSI < 30 (перепроданность)
+✅ 📊 Williams %R < -80 (перепроданность)
+❌ 📈 EMA9 пересекает EMA21
+✅ 📊 Объем > среднего на 20%
+
+🔴 SHORT условия (1/5):
+❌ 📈 Цена у верхней границы канала
+❌ 📊 RSI > 70 (перекупленность)
+❌ 📊 Williams %R > -20 (перекупленность)
+❌ 📈 EMA9 пересекает EMA21
+✅ 📊 Объем > среднего на 20%
+
+📝 Статус: В бычьем тренде ищем LONG. 
+Совпало 2 из 5 условий (нужно минимум 3)
+```
+
+**Объяснение терминов:**
+- **Боковик (нейтральный тренд)** — рынок движется горизонтально, без четкого направления. Бот не торгует в боковике.
+- **Канал не валидный** — ценовой канал не сформирован (нужно минимум 2 касания верхней и нижней границы за 20 свечей).
+- **Совпало X из 5 условий** — стратегия проверяет 5 условий одновременно; нужно минимум 3 для сигнала (это снижает количество ложных сигналов).
+
+**Как отключить сообщения мониторинга (для продакшена):**
+
+Если сообщения каждую минуту мешают, отредактируйте `trading_strategy/tasks.py`:
+
+```python
+# В функции analyze_and_trade найдите строку:
+await send_monitoring_update(user, symbol, analysis_details, signal)
+
+# И закомментируйте или удалите её:
+# await send_monitoring_update(user, symbol, analysis_details, signal)
+```
+
+Сообщения о **сигналах** (когда 3+ условий совпало) и **закрытии позиций** будут приходить в любом случае.
+
+### Основные команды
+
+- **📊 Статистика** - общая статистика торговли
+- **⚙️ Настройки** - настройка размера ордера, плеча, риска
+- **🔑 API Ключи** - добавление API ключей Bybit (для реальной торговли)
+- **📈 Торговые пары** - управление торговыми парами
+- **▶️ Старт** - запуск мониторинга
+- **⏸ Стоп** - остановка мониторинга
+- **📝 Открытые позиции** - текущие открытые сделки
+- **📜 История** - история всех сделок
+
+### Тестовый режим
+
+Без API ключей бот работает в **тестовом режиме**:
+- ✅ Мониторинг рынка активен
+- ✅ Анализ стратегии работает
+- ✅ Уведомления о текущем состоянии рынка каждую минуту
+- ✅ Уведомления о сигналах
+- ❌ Реальные сделки не открываются
+
+**Что вы получаете:**
+- Полный анализ рынка (цена, индикаторы, тренд, канал)
+- Информацию о каждом найденном сигнале
+- Статистику сигналов (сохраняется в БД)
+- Возможность анализировать работу стратегии
+
+### Реальный режим
+
+Для реальной торговли:
+1. Получите API ключи на [Bybit](https://www.bybit.com) или [Testnet](https://testnet.bybit.com)
+2. Права: Trading, Position (Read/Write)
+3. В боте: `🔑 API Ключи` → `➕ Добавить ключи`
+4. Выберите сеть (Testnet/Mainnet)
+5. Введите ключи
+
+После добавления ключей бот автоматически переключится на реальный режим и начнет открывать позиции.
+
+## 📊 Что вы видите в боте
+
+### Каждую минуту вы получаете:
+
+```
+📊 АНАЛИЗ РЫНКА
+
+💹 Символ: BTCUSDT
+💰 Текущая цена: $45000.00
+
+🟢 Тренд: BULLISH
+
+📈 Индикаторы:
+• EMA9/EMA21: $44900.00 / $44800.00
+• RSI: 65.5
+• Williams %R: -35.2
+• ATR: $500.00
+
+📊 Ценовой канал:
+• Верх: $46000.00
+• Низ: $44000.00
+• Позиция: Середина
+
+⚪ Сигнала нет - ждём условий...
+```
+
+### При обнаружении сигнала:
+
+```
+🟢 СИГНАЛ ОБНАРУЖЕН
+
+📊 Символ: BTCUSDT
+📈 Направление: LONG
+💰 Цена входа: $44200.00
+🎯 Уверенность: 80.0%
+
+🛑 Стоп-лосс: $43700.00
+🎯 Тейк-профит: $45450.00
+
+📝 Причина: LONG сигнал: near_lower_bound, rsi_oversold...
+```
+
+## 🔧 Структура проекта
+
+```
+trading_bot/
+├── bot_main.py             # Главный файл запуска Telegram-бота
+├── bot/                    # Telegram бот (роутеры, хендлеры, модели)
+│   ├── handlers.py        # Обработчики команд
+│   ├── handlers_api.py    # Обработчики API ключей
+│   ├── keyboards.py       # Клавиатуры
+│   ├── notifications.py   # Уведомления
+│   └── models.py         # Модели бота
+├── trading_strategy/       # Торговое приложение
+│   ├── models.py          # Модели БД (Exchange, Trade, SignalHistory)
+│   ├── strategy.py        # Торговая стратегия
+│   ├── exchange_client.py # Клиент Bybit
+│   ├── risk_manager.py    # Управление рисками
+│   ├── tasks.py           # Celery задачи (мониторинг)
+│   └── encryption.py      # Шифрование API ключей
+├── trading_bot/           # Настройки Django
 │   ├── settings.py
 │   ├── celery.py
 │   └── urls.py
-├── trading/                 # Торговое приложение
-│   ├── models.py           # Модели БД
-│   ├── strategy.py         # Торговая стратегия
-│   ├── exchange_client.py  # Клиент Bybit
-│   ├── risk_manager.py     # Управление рисками
-│   ├── encryption.py       # Шифрование API ключей
-│   ├── tasks.py            # Celery задачи
-│   └── admin.py            # Админка
-├── bot/                     # Telegram бот
-│   ├── models.py           # Модели бота
-│   ├── handlers.py         # Обработчики команд
-│   ├── handlers_api.py     # Обработчики API ключей
-│   ├── keyboards.py        # Клавиатуры
-│   ├── notifications.py    # Уведомления
-│   ├── states.py           # FSM состояния
-│   ├── bot_main.py         # Главный файл бота
-│   └── admin.py            # Админка
-├── requirements.txt         # Зависимости
-├── .env.example            # Пример переменных окружения
-├── .gitignore
-└── README.md
+├── requirements.txt
+├── manage.py
+└── .env                   # Переменные окружения (создать вручную)
 ```
 
 ## ⚠️ Важные замечания
 
 ### Безопасность
 
-1. **API ключи шифруются** с помощью Fernet перед сохранением в БД
-2. **Храните ENCRYPTION_KEY в безопасности** - без него невозможно расшифровать ключи
-3. **Не коммитьте .env файл** в git
-4. **Используйте IP whitelist** на Bybit для mainnet ключей
+1. **API ключи шифруются** перед сохранением в БД
+2. **Храните ENCRYPTION_KEY в безопасности**
+3. **Не коммитьте .env** в git
+4. **Используйте IP whitelist** на Bybit для mainnet
 
 ### Риски
 
@@ -385,66 +450,46 @@ webapp/
 - Бот **НЕ гарантирует** прибыль
 - Следите за балансом и статистикой
 
-### Ограничения
-
-- Поддерживается только биржа **Bybit**
-- Только **фьючерсы USDT**
-- Одна стратегия (не изменяемая пользователем)
-- Рекомендуемый таймфрейм: **5m** (можно изменить в админке)
-
 ## 🐛 Решение проблем
 
 ### Бот не отвечает
 
-1. Проверьте, что бот запущен: `ps aux | grep bot_main`
-2. Проверьте логи: `tail -f bot.log`
-3. Проверьте Redis: `redis-cli ping`
+```bash
+# Проверьте логи
+tail -f bot.log
 
-### Сделки не открываются
+# Проверьте токен (без кавычек в .env!)
+cat .env | grep TELEGRAM_BOT_TOKEN
 
-1. Проверьте, что торговля запущена (▶️ Старт в боте)
-2. Проверьте Celery Worker: `celery -A config inspect active`
-3. Проверьте логи Celery: `tail -f celery_worker.log`
-4. Проверьте API ключи: нажмите `🔍 Проверить подключение` в боте
+# Перезапустите
+pkill -f bot_main
+python bot_main.py
+```
 
-### Ошибки подключения к Bybit
+### Redis не работает
 
-1. Проверьте API ключи (правильность ввода)
-2. Проверьте права API ключей (Trading, Position)
-3. Проверьте сеть (testnet/mainnet)
-4. Проверьте IP whitelist (для mainnet)
+```bash
+redis-cli ping  # Должно вернуть PONG
+redis-server    # Если не запущен
+```
 
 ### Ошибки БД
 
 ```bash
-# Пересоздание миграций
-python manage.py migrate --fake trading zero
-python manage.py migrate trading
-
-# Сброс БД (ОСТОРОЖНО - удалит все данные!)
-python manage.py flush
 python manage.py migrate
+python manage.py showmigrations
 ```
 
-## 📞 Поддержка
+### Уведомления не приходят
 
-Если возникли вопросы или проблемы:
-
-1. Проверьте раздел "Решение проблем" выше
-2. Проверьте логи (`bot.log`, `celery_worker.log`, `celery_beat.log`)
-3. Откройте Issue в репозитории GitHub
+1. Проверьте что торговля запущена (`▶️ Старт`)
+2. Проверьте что есть активные торговые пары
+3. Проверьте логи: `docker compose logs -f app celery celery-beat redis`
+4. Подождите 1-2 минуты (мониторинг каждую минуту)
 
 ## 📝 Лицензия
 
 MIT License
-
-## 🙏 Благодарности
-
-- [Django](https://www.djangoproject.com/)
-- [aiogram](https://github.com/aiogram/aiogram)
-- [ccxt](https://github.com/ccxt/ccxt)
-- [Celery](https://docs.celeryproject.org/)
-- [Bybit](https://www.bybit.com/)
 
 ---
 

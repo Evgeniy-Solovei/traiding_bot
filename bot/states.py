@@ -23,6 +23,8 @@ class SettingsStates(StatesGroup):
     waiting_for_order_size = State()
     waiting_for_leverage = State()
     waiting_for_risk = State()
+    waiting_for_daily_limit = State()
+    waiting_for_max_losses = State()
 
 
 class TradingPairStates(StatesGroup):

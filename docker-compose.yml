@@ -1,0 +1,128 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Europe/Moscow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - bot_core
+
+  app:
+    container_name: app_core
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             uvicorn trading_bot.asgi:application --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2} &
+             python bot_main.py"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Moscow
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - bot_core
+
+  redis:
+    container_name: redis
+    image: redis:alpine
+    command:
+      - redis-server
+      - --bind
+      - 0.0.0.0
+      - --protected-mode
+      - "no"
+      - --cluster-enabled
+      - "no"
+      - --cluster-require-full-coverage
+      - "no"
+      - --replica-read-only
+      - "no"
+      - --replicaof
+      - no
+      - one
+      - --appendonly
+      - "yes"
+    ports:
+      - "6379:6379"
+    environment:
+      TZ: Europe/Moscow
+    restart: unless-stopped
+    networks:
+      - bot_core
+
+  celery:
+    container_name: celery
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A trading_bot worker --loglevel=info
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Moscow
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - bot_core
+
+  celery-beat:
+    container_name: celery_beat
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A trading_bot beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Moscow
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - bot_core
+
+networks:
+  bot_core:
+    driver: bridge
+
+volumes:
+  postgres_data:

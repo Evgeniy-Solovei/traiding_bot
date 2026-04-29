@@ -13,9 +13,9 @@ from .keyboards import (
     get_cancel_keyboard, get_main_keyboard
 )
 from .states import APIKeysStates
-from trading.models import Exchange
-from trading.encryption import encrypt_api_credentials
-from trading.exchange_client import test_connection
+from trading_strategy.models import Exchange
+from trading_strategy.encryption import encrypt_api_credentials
+from trading_strategy.exchange_client import test_connection
 
 router = Router()
 
@@ -222,6 +222,34 @@ async def process_api_secret(message: Message, state: FSMContext):
     await state.clear()
 
 
+# ==== CALLBACK: Изменить ключи ====
+@router.callback_query(F.data == "api_edit")
+async def api_edit_callback(callback: CallbackQuery, state: FSMContext):
+    """Изменение API ключей (то же что добавление, но с удалением старых)"""
+    bot_user = await asyncio.to_thread(
+        BotUser.objects.filter(telegram_id=callback.from_user.id).select_related('django_user').first
+    )
+    
+    if not bot_user:
+        await callback.answer("❌ Ошибка", show_alert=True)
+        return
+    
+    # Удаляем старые ключи
+    old_exchange = await asyncio.to_thread(
+        Exchange.objects.filter(user=bot_user.django_user, is_active=True).first
+    )
+    
+    if old_exchange:
+        await asyncio.to_thread(old_exchange.delete)
+    
+    await callback.message.answer(
+        "🌐 Выберите сеть для новых API ключей:",
+        reply_markup=get_testnet_keyboard()
+    )
+    await state.set_state(APIKeysStates.choosing_network)
+    await callback.answer()
+
+
 # ==== CALLBACK: Удалить ключи ====
 @router.callback_query(F.data == "api_delete")
 async def api_delete_callback(callback: CallbackQuery):
@@ -276,7 +304,7 @@ async def api_test_callback(callback: CallbackQuery):
     
     await callback.message.edit_text("🔄 Проверяю подключение...")
     
-    from trading.encryption import decrypt_api_credentials
+    from trading_strategy.encryption import decrypt_api_credentials
     
     api_key, api_secret = await asyncio.to_thread(
         decrypt_api_credentials,
